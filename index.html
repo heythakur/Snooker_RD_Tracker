@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RD Snooker</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #1c1e21;
+            --secondary-text: #65676b;
+            --accent-color: #0750DE;
+            --pot-color: #0D6138;
+            --danger-color: #E0142F;
+            --border-color: #e0e0e0;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --modal-bg: #ffffff;
+            --input-bg: #f0f2f5;
+            --header-bg: #000000;
+            --header-text: #ffffff;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #18191a;
+            --card-bg: #242526;
+            --text-color: #e4e6eb;
+            --secondary-text: #b0b3b8;
+            --accent-color: #4A7AEE;
+            --pot-color: #2E8B57;
+            --danger-color: #FF4D4D;
+            --border-color: #3a3b3c;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --modal-bg: #242526;
+            --input-bg: #3a3b3c;
+            --header-bg: #000000;
+            --header-text: #ffffff;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+            padding-bottom: 100px;
+        }
+
+        .screen { width: 100%; max-width: 600px; padding: 80px 20px 20px 20px; }
+        .hidden { display: none !important; }
+        h1, h2 { font-weight: 700; letter-spacing: -0.5px; }
+        h1 { font-size: 28px; margin-bottom: 20px; text-align: center; }
+
+        /* Floating Dropping Header */
+        .top-bar-header {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            background: var(--header-bg);
+            color: var(--header-text);
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 200;
+            border-radius: 28px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            animation: dropDownHeader 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes dropDownHeader {
+            0% { transform: translateY(-100px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .header-btn { 
+            background: transparent; color: #fff; padding: 8px; width: 40px; height: 40px; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s; border: none;
+        }
+        .header-btn:active { background-color: rgba(255,255,255,0.15); transform: scale(0.92); }
+        .header-timer { font-size: 18px; font-weight: 700; font-family: 'SF Mono', monospace; letter-spacing: 0.5px; }
+        .header-right { display: flex; gap: 5px; align-items: center; }
+
+        /* Setup Screen */
+        .setup-container { display: flex; flex-direction: column; gap: 15px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .checkbox-group {
+            display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+            background-color: var(--input-bg); padding: 14px; border-radius: 12px; border: 1px solid var(--border-color);
+        }
+        .checkbox-group label { margin-bottom: 0; cursor: pointer; }
+        .checkbox-group input { width: 20px; height: 20px; accent-color: var(--accent-color); cursor: pointer; }
+        
+        label { font-size: 13px; font-weight: 600; color: var(--secondary-text); text-transform: uppercase; }
+        input, select {
+            padding: 14px; font-size: 16px; border-radius: 12px; border: 1px solid var(--border-color);
+            background-color: var(--input-bg); color: var(--text-color); outline: none; transition: 0.2s;
+        }
+        input:focus { border-color: var(--accent-color); }
+        
+        button {
+            padding: 14px 20px; font-size: 16px; font-weight: 600; border-radius: 12px; border: none;
+            cursor: pointer; background-color: var(--accent-color); color: #fff; transition: 0.2s; width: 100%;
+        }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: var(--border-color) !important; cursor: not-allowed; color: var(--secondary-text); }
+        button.secondary-btn { background-color: transparent; color: var(--accent-color); border: 1px solid var(--accent-color); }
+        button.danger-btn { background-color: var(--danger-color); }
+        button.accent-btn { background-color: var(--accent-color); }
+
+        .player-input-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .player-input-row input { flex-grow: 1; }
+        .remove-btn { width: 50px; background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); padding: 0; font-size: 20px; flex-shrink: 0; }
+        #add-player-btn { background-color: transparent; color: var(--accent-color); border: 1px dashed var(--accent-color); }
+        #continue-game-btn { background-color: transparent; color: var(--text-color); border: 1px solid var(--border-color); margin-top: 10px; }
+
+        /* Game Screen Actions (Add/Remove Player) */
+        .game-screen-actions { display: flex; gap: 12px; margin-top: 20px; }
+        .game-screen-actions button { flex: 1; padding: 12px; font-size: 15px; }
+        .remove-player-btn { color: var(--danger-color); border-color: var(--danger-color) !important; }
+
+        /* Player Cards */
+        #player-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .player-card {
+            background-color: var(--card-bg); border-radius: 16px; padding: 18px; display: flex;
+            justify-content: space-between; align-items: center; box-shadow: var(--shadow); transition: 0.3s;
+        }
+        .player-card.out { opacity: 0.5; background-color: var(--input-bg); order: 99; }
+        .player-info { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+        .player-header { display: flex; align-items: center; gap: 8px; }
+        
+        /* Increased Font Sizes Here */
+        .player-rank { font-size: 16px; font-weight: 700; color: var(--secondary-text); width: 28px; }
+        .player-name { font-size: 19px; font-weight: 700; cursor: pointer; }
+        
+        .crown { font-size: 14px; }
+        .cherry-status { display: flex; gap: 6px; align-items: center; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--danger-color); border: 1px solid rgba(0,0,0,0.1); transition: 0.2s; }
+        .status-dot.attempt { background-color: transparent; border: 1px solid var(--secondary-text); }
+        .status-dot.done { opacity: 0.3; background-color: var(--secondary-text) !important; border-color: var(--secondary-text); position: relative; overflow: hidden; }
+        .status-dot.done::after { content: ''; position: absolute; top: 50%; left: -10%; width: 120%; height: 2px; background-color: var(--secondary-text); transform: rotate(-45deg); }
+        .status-separator { width: 1px; height: 12px; background-color: var(--border-color); margin: 0 4px; }
+        
+        .player-score {
+            font-size: 32px; font-weight: 700; background-color: var(--input-bg); padding: 10px 18px;
+            border-radius: 12px; min-width: 90px; text-align: center; cursor: pointer; transition: 0.2s;
+        }
+        .player-score:active { transform: scale(0.95); }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; width: 100%; background-color: var(--bg-color);
+            display: flex; justify-content: center; gap: 15px; padding: 15px 20px; border-top: 1px solid var(--border-color); z-index: 150;
+        }
+        .bottom-bar button { width: auto; flex: 1; max-width: 200px; }
+        #reset-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); }
+        #undo-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); }
+
+        /* Modals */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6);
+            display: flex; justify-content: center; align-items: flex-end; z-index: 300; backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background-color: var(--modal-bg); width: 100%; max-width: 500px; border-radius: 24px 24px 0 0;
+            padding: 24px; display: flex; flex-direction: column; gap: 20px; animation: slideUp 0.3s ease-out;
+        }
+        .modal-content.centered { border-radius: 24px; align-items: center; text-align: center; max-width: 400px; margin: auto; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .modal-title { font-size: 18px; font-weight: 700; }
+        .close-x { background: none; color: var(--secondary-text); width: auto; font-size: 24px; padding: 0; }
+
+        /* Balls Grid */
+        .ball-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .ball-btn {
+            aspect-ratio: 1; border-radius: 50%; display: flex; justify-content: center; align-items: center;
+            font-weight: 800; font-size: 18px; color: #fff; border: none; box-shadow: inset -4px -4px 8px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1);
+            transition: 0.1s; cursor: pointer; width: 100%; padding: 0;
+        }
+        .ball-btn:active { transform: scale(0.95); }
+        .ball-btn:disabled { opacity: 0.2; box-shadow: none; cursor: not-allowed; transform: none; }
+
+        /* Action Toggles */
+        .action-toggles { display: flex; gap: 12px; background-color: var(--input-bg); padding: 6px; border-radius: 12px; }
+        .action-toggles button { flex: 1; background-color: transparent; color: var(--secondary-text); padding: 10px; border-radius: 8px; font-weight: 600; transition: 0.2s; }
+        .action-toggles button.active { background-color: var(--pot-color); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        .action-toggles button.active.foul { background-color: var(--danger-color); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+
+        .break-display { text-align: center; font-family: 'SF Mono', monospace; font-size: 14px; background: var(--input-bg); padding: 12px; border-radius: 12px; min-height: 45px; color: var(--secondary-text); word-break: break-all; }
+        .break-display span { color: var(--text-color); font-weight: 700; }
+
+        /* History Modal */
+        .history-content { max-height: 50vh; overflow-y: auto; background: var(--input-bg); border-radius: 12px; padding: 15px; font-size: 14px; }
+        .history-entry { padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; }
+        .history-entry:last-child { border-bottom: none; }
+
+        /* Lock Overlay */
+        .lock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 100; display: none; }
+        .lock-overlay.active { display: block; }
+
+        .rules-text { font-size: 14px; line-height: 1.6; color: var(--secondary-text); max-height: 60vh; overflow-y: auto; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Dropping Header -->
+    <div class="top-bar-header" id="top-bar-header">
+        <button class="header-btn" onclick="toggleLock()" id="lock-btn"></button>
+        <div class="header-timer" id="timer">00:00:00</div>
+        <div class="header-right">
+            <button class="header-btn" onclick="toggleTheme()" id="theme-btn"></button>
+            <button class="header-btn" onclick="showRules()" id="info-btn"></button>
+        </div>
+    </div>
+
+    <!-- Setup Screen -->
+    <div id="setup-screen" class="screen">
+        <h1>RD Snooker</h1>
+        <div class="setup-container">
+            <div id="players-inputs"></div>
+            <button id="add-player-btn" class="secondary-btn" onclick="addPlayerInput()">+ Add Player</button>
+            
+            <div class="checkbox-group">
+                <label for="random-order">Randomize Player Order</label>
+                <input type="checkbox" id="random-order" checked>
+            </div>
+
+            <div class="input-group">
+                <label>Target Score</label>
+                <input type="number" id="target-score" value="100">
+            </div>
+            <div class="input-group">
+                <label>Compulsory Cherries (Pots)</label>
+                <input type="number" id="comp-cherries" value="2">
+            </div>
+            <div class="input-group">
+                <label>Cherry Attempts</label>
+                <input type="number" id="att-cherries" value="3">
+            </div>
+            
+            <button id="start-game-btn" onclick="startGame()">Start Game</button>
+            <button id="continue-game-btn" onclick="document.getElementById('upload-file').click()">Continue Game (Upload .txt)</button>
+            <input type="file" id="upload-file" accept=".txt" class="hidden" onchange="loadGameState(event)">
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+        <div id="player-list"></div>
+        
+        <div class="game-screen-actions">
+            <button class="secondary-btn" onclick="addPlayerFromGame()">+ Add Player</button>
+            <button class="secondary-btn remove-player-btn" onclick="showRemovePlayerModal()">- Remove Player</button>
+        </div>
+        
+        <div class="bottom-bar">
+            <button id="undo-btn" onclick="undoLastAction()">Undo</button>
+            <button id="reset-btn" onclick="resetGame()">Reset</button>
+        </div>
+    </div>
+    
+    <div class="lock-overlay" id="lock-overlay"></div>
+
+    <!-- Entry Modal -->
+    <div id="entry-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="entry-title">Player 1</div>
+                <button class="close-x" onclick="closeModal('entry-modal')">✕</button>
+            </div>
+            
+            <div class="ball-grid" id="ball-grid"></div>
+            
+            <div class="action-toggles">
+                <button id="pot-toggle" class="active" onclick="setAction('pot')">Pot</button>
+                <button id="foul-toggle" onclick="setAction('foul')">Foul</button>
+            </div>
+            
+            <div class="break-display" id="current-break-display">Break: <span>0</span></div>
+            
+            <button id="done-btn" onclick="submitBreak()">Done</button>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="history-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="history-title">Break History</div>
+                <button class="close-x" onclick="closeModal('history-modal')">✕</button>
+            </div>
+            <div class="history-content" id="history-content"></div>
+            <button class="secondary-btn" onclick="closeModal('history-modal')">Close</button>
+        </div>
+    </div>
+
+    <!-- Remove Player Modal -->
+    <div id="remove-player-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Remove Player</div>
+                <button class="close-x" onclick="closeModal('remove-player-modal')">✕</button>
+            </div>
+            <div id="remove-player-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            <button class="secondary-btn" onclick="closeModal('remove-player-modal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">RD Rules</div>
+                <button class="close-x" onclick="closeModal('rules-modal')">✕</button>
+            </div>
+            <div class="rules-text">
+                <strong>Setup:</strong> 6 colours on usual spots. 1 Red (Cherry) between Pink and Black.<br><br>
+                <strong>Points:</strong> Y=2, G=3, Br=4, Bl=5, P=6, Bk=7, Cherry=10.<br><br>
+                <strong>Gameplay:</strong> Call shot (ball and pocket). Hit called ball first, pot in called pocket. Safe shot allowed (hit called ball, don't pot). NO SAFE on Cherry.<br><br>
+                <strong>Cherry Rules:</strong><br>
+                - +10 if potted, -10 if missed.<br>
+                - Cannot be attempted (pot) if on absolute 0 score initially. Once a player moves from 0, it is enabled for the rest of the game.<br>
+                - Must meet Compulsory Pots and Attempts to exit. Extra pots pay off attempts.<br>
+                - A miss or auto-foul does not count towards attempts if it breaks 3-in-a-row. Accidental hits do not deduct attempts.<br><br>
+                <strong>3-in-a-Row Rule:</strong> Max 3 consecutive pots of same colour in a break (including Cherry). 4th is auto-foul (minimum 4 points or ball value) and ends the break.<br><br>
+                <strong>Break Rules:</strong> Must hit Pink or Black off break from D. In-hand after scratch (any ball).<br><br>
+                <strong>Exit Rules:</strong> Reach target, meet cherries, end turn legally (no foul). 100-Point Cap: If crossing target but fouling, score caps at target, then deduct foul.
+            </div>
+            <button class="secondary-btn" onclick="closeModal('rules-modal')">Close</button>
+        </div>
+    </div>
+
+    <!-- Reset Modal -->
+    <div id="reset-modal" class="modal-overlay hidden">
+        <div class="modal-content centered">
+            <div class="modal-header">
+                <div class="modal-title">Reset Game?</div>
+                <button class="close-x" onclick="closeModal('reset-modal')">✕</button>
+            </div>
+            <p style="color: var(--secondary-text);">Choose an option below. Resetting will clear the current game.</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+                <button class="accent-btn" onclick="confirmReset(true)">Download File & Reset</button>
+                <button class="danger-btn" onclick="confirmReset(false)">Exit Anyways</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- STATE MANAGEMENT ---
+    let state = {
+        players: [],
+        targetScore: 100,
+        compCherries: 0,
+        attCherries: 0,
+        timerStart: null,
+        lastScoredPlayerId: null,
+        history: []
+    };
+
+    let currentBreakActions = [];
+    let currentActionType = 'pot';
+    let activePlayerId = null;
+    let isLocked = false;
+    let timerInterval = null;
+
+    // --- CONSTANTS ---
+    const BALLS = [
+        { name: 'yellow', points: 2, color: '#FFD500', textDark: true },
+        { name: 'green', points: 3, color: '#0D6138', textDark: false },
+        { name: 'brown', points: 4, color: '#4A2D14', textDark: false },
+        { name: 'blue', points: 5, color: '#0821A1', textDark: false },
+        { name: 'pink', points: 6, color: '#F5A9C5', textDark: true },
+        { name: 'black', points: 7, color: '#121212', textDark: false },
+        { name: 'cherry', points: 10, color: '#E0142F', textDark: true }
+    ];
+
+    // Modern Filled SVG Icons
+    const lockClosedSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>';
+    const lockOpenSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z"/></svg>';
+    const moonSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>';
+    const sunSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"></line></svg>';
+    const infoSvg = '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+
+    // --- INIT ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const savedTheme = localStorage.getItem('rdTheme') || 'light';
+        document.body.setAttribute('data-theme', savedTheme);
+        updateThemeIcons(savedTheme);
+        
+        // Set initial header icons
+        document.getElementById('lock-btn').innerHTML = lockOpenSvg;
+        document.getElementById('info-btn').innerHTML = infoSvg;
+
+        addPlayerInput(); addPlayerInput(); addPlayerInput(); addPlayerInput();
+        
+        const saved = localStorage.getItem('rdSnookerState');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.players && parsed.players.length > 0) {
+                    state = parsed;
+                    showGameScreen();
+                    return;
+                }
+            } catch(e) { console.error("Failed to load state", e); }
+        }
+        showSetupScreen();
+    });
+
+    function saveState() { localStorage.setItem('rdSnookerState', JSON.stringify(state)); }
+    function pushHistory() {
+        state.history.push(JSON.stringify(state));
+        if (state.history.length > 20) state.history.shift();
+        saveState();
+    }
+
+    function toggleTheme() {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('rdTheme', next);
+        updateThemeIcons(next);
+    }
+
+    function updateThemeIcons(theme) {
+        document.getElementById('theme-btn').innerHTML = theme === 'dark' ? sunSvg : moonSvg;
+    }
+
+    // --- SETUP SCREEN ---
+    function addPlayerInput() {
+        const container = document.getElementById('players-inputs');
+        const div = document.createElement('div');
+        div.className = 'player-input-row';
+        const count = container.children.length + 1;
+        div.innerHTML = `<input type="text" placeholder="Player ${count}" value="Player ${count}"><button class="remove-btn" onclick="this.parentElement.remove()">✕</button>`;
+        container.appendChild(div);
+    }
+
+    function startGame() {
+        const inputs = document.querySelectorAll('#players-inputs input');
+        let players = [];
+        inputs.forEach((input, index) => {
+            if (input.value.trim() !== '') {
+                players.push({
+                    id: 'p' + index + '_' + Date.now(),
+                    name: input.value.trim(),
+                    score: 0,
+                    breakHistory: [],
+                    isOut: false,
+                    outRank: 0,
+                    hasMovedFromZero: false,
+                    compPotsLeft: 0,
+                    attLeft: 0
+                });
+            }
+        });
+
+        if (players.length < 2) { alert('Need at least 2 players!'); return; }
+
+        // Shuffle players if checkbox is checked
+        if (document.getElementById('random-order').checked) {
+            for (let i = players.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [players[i], players[j]] = [players[j], players[i]];
+            }
+        }
+
+        state.players = players;
+        state.targetScore = parseInt(document.getElementById('target-score').value) || 100;
+        state.compCherries = parseInt(document.getElementById('comp-cherries').value) || 0;
+        state.attCherries = parseInt(document.getElementById('att-cherries').value) || 0;
+        state.timerStart = Date.now();
+        state.lastScoredPlayerId = null;
+        state.history = [];
+
+        players.forEach(p => { p.compPotsLeft = state.compCherries; p.attLeft = state.attCherries; });
+        saveState();
+        showGameScreen();
+    }
+
+    function showSetupScreen() {
+        document.getElementById('setup-screen').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+        // Completely hide timer and lock on the pre-game screen
+        document.getElementById('timer').style.display = 'none';
+        document.getElementById('lock-btn').style.display = 'none';
+    }
+
+    function showGameScreen() {
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        // Restore timer and lock for the game screen
+        document.getElementById('timer').style.display = 'block';
+        document.getElementById('lock-btn').style.display = 'flex';
+        startTimer();
+        renderGame();
+    }
+
+    // --- TIMER ---
+    function startTimer() {
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            const elapsed = Date.now() - state.timerStart;
+            const h = String(Math.floor(elapsed / 3600000)).padStart(2, '0');
+            const m = String(Math.floor((elapsed % 3600000) / 60000)).padStart(2, '0');
+            const s = String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0');
+            document.getElementById('timer').textContent = `${h}:${m}:${s}`;
+        }, 1000);
+    }
+
+    // --- ADD/REMOVE PLAYERS MID-GAME ---
+    function addPlayerFromGame() {
+        if (isLocked) return;
+        const msg = `Add a new player? They will start at 0 points and require ${state.compCherries} Cherry pots and ${state.attCherries} attempts.`;
+        showConfirm(msg, () => {
+            const name = prompt("Enter new player's name:");
+            if (name && name.trim() !== '') {
+                pushHistory();
+                state.players.push({
+                    id: 'p_' + Date.now(),
+                    name: name.trim(),
+                    score: 0,
+                    breakHistory: [],
+                    isOut: false,
+                    outRank: 0,
+                    hasMovedFromZero: false,
+                    compPotsLeft: state.compCherries,
+                    attLeft: state.attCherries
+                });
+                saveState();
+                renderGame();
+            }
+        });
+    }
+
+    function showRemovePlayerModal() {
+        if (isLocked) return;
+        const list = document.getElementById('remove-player-list');
+        list.innerHTML = '';
+        
+        if (state.players.length <= 1) {
+            list.innerHTML = "<p style='text-align:center; color:var(--secondary-text)'>Cannot remove the last player!</p>";
+        } else {
+            state.players.forEach(p => {
+                const btn = document.createElement('button');
+                btn.className = 'danger-btn';
+                btn.style.width = '100%';
+                btn.textContent = p.name;
+                btn.onclick = () => confirmRemovePlayer(p.id, p.name);
+                list.appendChild(btn);
+            });
+        }
+        document.getElementById('remove-player-modal').classList.remove('hidden');
+    }
+
+    function confirmRemovePlayer(id, name) {
+        const msg = `Remove ${name} and reset table time?`;
+        showConfirm(msg, () => {
+            pushHistory();
+            const removedIdx = state.players.findIndex(p => p.id === id);
+            if (removedIdx !== -1) {
+                state.players.splice(removedIdx, 1);
+                
+                // Fix turn rotation if the removed player was the last to score
+                if (state.lastScoredPlayerId === id) {
+                    if (state.players.length > 0) {
+                        const newIdx = Math.min(removedIdx, state.players.length - 1);
+                        state.lastScoredPlayerId = state.players[newIdx].id;
+                    } else {
+                        state.lastScoredPlayerId = null;
+                    }
+                }
+
+                // Recalculate Out Ranks so there are no gaps (e.g., if #1 exits, #2 becomes #1)
+                const outPlayers = state.players.filter(p => p.isOut).sort((a, b) => a.outRank - b.outRank);
+                outPlayers.forEach((p, index) => {
+                    p.outRank = index + 1;
+                });
+
+                // Reset Table Time
+                state.timerStart = Date.now();
+                startTimer();
+
+                // Close active entry modal if the removed player was being edited
+                if (activePlayerId === id) {
+                    closeModal('entry-modal');
+                    activePlayerId = null;
+                }
+
+                saveState();
+                renderGame();
+            }
+            closeModal('remove-player-modal');
+        });
+    }
+
+    // --- RENDER GAME ---
+    function renderGame() {
+        const list = document.getElementById('player-list');
+        list.innerHTML = '';
+
+        const active = state.players.filter(p => !p.isOut);
+        const out = state.players.filter(p => p.isOut).sort((a,b) => a.outRank - b.outRank);
+
+        [...active, ...out].forEach((player, index) => {
+            const card = document.createElement('div');
+            card.className = 'player-card' + (player.isOut ? ' out' : '');
+            
+            let rankDisplay = player.isOut ? `#${player.outRank}` : `${index + 1}`;
+            let crown = player.isOut && player.outRank === 1 ? '<span class="crown">👑</span>' : '';
+            
+            let cherries = '';
+            for(let i=0; i<state.compCherries; i++) {
+                let done = i < (state.compCherries - player.compPotsLeft);
+                cherries += `<span class="status-dot ${done ? 'done' : ''}"></span>`;
+            }
+            if (state.attCherries > 0) {
+                cherries += '<span class="status-separator"></span>';
+                for(let i=0; i<state.attCherries; i++) {
+                    let done = i < (state.attCherries - player.attLeft);
+                    cherries += `<span class="status-dot attempt ${done ? 'done' : ''}"></span>`;
+                }
+            }
+
+            card.innerHTML = `
+                <div class="player-info">
+                    <div class="player-header">
+                        <span class="player-rank">${rankDisplay}</span>
+                        <span class="player-name" onclick="showHistory('${player.id}')">${player.name} ${crown}</span>
+                    </div>
+                    <div class="cherry-status">${cherries || '<span style="font-size:12px; color:var(--secondary-text)">No Cherries</span>'}</div>
+                </div>
+                <div class="player-score" onclick="openEntryModal('${player.id}')">${player.score}</div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    // --- ENTRY MODAL ---
+    let consecutivePots = { ball: null, count: 0 };
+
+    function openEntryModal(playerId) {
+        if (isLocked) return;
+        activePlayerId = playerId;
+        currentBreakActions = [];
+        currentActionType = 'pot';
+        consecutivePots = { ball: null, count: 0 };
+        
+        const player = state.players.find(p => p.id === playerId);
+        if (!player) return; // Safety check
+        
+        document.getElementById('entry-title').textContent = `${player.name} (${player.score})`;
+        
+        renderBallButtons(player);
+        setAction('pot');
+        updateBreakDisplay();
+        document.getElementById('entry-modal').classList.remove('hidden');
+    }
+
+    function renderBallButtons(player) {
+        const grid = document.getElementById('ball-grid');
+        grid.innerHTML = '';
+        
+        // Calculate current score during this break
+        let tempScore = player.score;
+        currentBreakActions.forEach(a => {
+            if (a.type === 'pot') tempScore += a.points;
+            else tempScore -= a.points;
+        });
+
+        // Check if break is ended (foul occurred)
+        let breakEnded = false;
+        if (currentBreakActions.length > 0 && currentBreakActions[currentBreakActions.length - 1].type === 'foul') {
+            breakEnded = true;
+        }
+
+        BALLS.forEach(ball => {
+            const btn = document.createElement('button');
+            btn.className = 'ball-btn';
+            btn.style.backgroundColor = ball.color;
+            btn.style.color = ball.textDark ? '#000' : '#fff';
+            btn.innerText = `${ball.points}`;
+            
+            let isDisabled = false;
+
+            // 1. Disable all if break ended
+            if (breakEnded) isDisabled = true;
+
+            // 2. Cherry Logic for Pot
+            if (ball.name === 'cherry' && !isDisabled) {
+                if (currentActionType === 'pot') {
+                    if (tempScore === 0 && !player.hasMovedFromZero) {
+                        isDisabled = true;
+                    }
+                }
+            }
+
+            if (isDisabled) btn.disabled = true;
+
+            btn.onclick = () => addAction(ball);
+            grid.appendChild(btn);
+        });
+    }
+
+    function setAction(type) {
+        currentActionType = type;
+        document.getElementById('pot-toggle').classList.toggle('active', type === 'pot');
+        document.getElementById('foul-toggle').classList.toggle('active', type === 'foul');
+        document.getElementById('foul-toggle').classList.toggle('foul', type === 'foul');
+        
+        if (activePlayerId) {
+            const player = state.players.find(p => p.id === activePlayerId);
+            if (player) renderBallButtons(player);
+        }
+    }
+
+    function addAction(ball) {
+        if (currentBreakActions.length > 0) {
+            const lastAction = currentBreakActions[currentBreakActions.length - 1];
+            if (lastAction.type === 'foul') return;
+        }
+
+        let points = ball.points;
+        if (currentActionType === 'foul' && points < 4) points = 4;
+
+        // Cherry Foul Specific Logic (Restored Pop-up)
+        if (currentActionType === 'foul' && ball.name === 'cherry') {
+            let isMissAttempt = confirm("Did the player attempt to POT the Cherry and miss?\n\nClick OK if YES (Deduct Attempt).\nClick Cancel if NO (Accidental hit, No Attempt Deducted).");
+            currentBreakActions.push({ type: 'foul', ball: ball.name, points: points, isAuto3Row: false, isMissAttempt: isMissAttempt });
+            consecutivePots = { ball: null, count: 0 };
+            updateBreakDisplay();
+            const player = state.players.find(p => p.id === activePlayerId);
+            renderBallButtons(player);
+            return;
+        }
+
+        // 3-in-a-row logic
+        if (currentActionType === 'pot') {
+            if (consecutivePots.ball === ball.name && consecutivePots.count >= 3) {
+                alert(`4th consecutive ${ball.name}! This is an automatic foul.`);
+                let autoFoulPoints = ball.points < 4 ? 4 : ball.points;
+                currentBreakActions.push({ type: 'foul', ball: ball.name, points: autoFoulPoints, isAuto3Row: true, isMissAttempt: false });
+                consecutivePots = { ball: null, count: 0 };
+                updateBreakDisplay();
+            } else {
+                if (consecutivePots.ball === ball.name) consecutivePots.count++;
+                else { consecutivePots.ball = ball.name; consecutivePots.count = 1; }
+                
+                currentBreakActions.push({ type: currentActionType, ball: ball.name, points: points });
+                updateBreakDisplay();
+            }
+        } else {
+            // Manual Foul
+            consecutivePots = { ball: null, count: 0 };
+            currentBreakActions.push({ type: currentActionType, ball: ball.name, points: points, isAuto3Row: false, isMissAttempt: false });
+            updateBreakDisplay();
+        }
+
+        const player = state.players.find(p => p.id === activePlayerId);
+        renderBallButtons(player);
+    }
+
+    function updateBreakDisplay() {
+        let text = "";
+        let total = 0;
+        currentBreakActions.forEach(a => {
+            text += `${a.ball} ${a.type == 'pot' ? '+' : '-'}${a.points} | `;
+            total += (a.type === 'pot' ? a.points : -a.points);
+        });
+        document.getElementById('current-break-display').innerHTML = `Break: ${text} <span>= ${total}</span>`;
+    }
+
+    function submitBreak() {
+        pushHistory();
+        const player = state.players.find(p => p.id === activePlayerId);
+        if (!player) return;
+        
+        // 1. Implicit Null Breaks (Fixed logic to correctly track skipped players)
+        const currIdx = state.players.findIndex(p => p.id === activePlayerId);
+        let startIdx = 0;
+        
+        if (state.lastScoredPlayerId !== null) {
+            startIdx = (state.players.findIndex(p => p.id === state.lastScoredPlayerId) + 1) % state.players.length;
+        }
+        
+        let idx = startIdx;
+        while (idx !== currIdx) {
+            if (!state.players[idx].isOut) {
+                state.players[idx].breakHistory.push({ actions: [], total: state.players[idx].score, type: 'null' });
+            }
+            idx = (idx + 1) % state.players.length;
+        }
+
+        // 2. Process current break
+        let tempScore = player.score;
+        let lastActionWasFoul = false;
+        let actionsTaken = currentBreakActions.length;
+
+        currentBreakActions.forEach(action => {
+            if (action.type === 'pot') {
+                tempScore += action.points;
+                
+                if (action.ball === 'cherry') {
+                    if (player.compPotsLeft > 0) player.compPotsLeft--;
+                    else if (player.attLeft > 0) player.attLeft--;
+                }
+            } else { // Foul
+                if (tempScore > state.targetScore) tempScore = state.targetScore;
+                tempScore -= action.points;
+                lastActionWasFoul = true;
+                
+                // Deduct attempt if it was a genuine miss attempt (not auto 3-row)
+                if (action.ball === 'cherry' && action.isMissAttempt && !action.isAuto3Row) {
+                    if (player.attLeft > 0) player.attLeft--;
+                }
+            }
+        });
+
+        if (actionsTaken > 0) player.hasMovedFromZero = true;
+
+        player.score = tempScore;
+        
+        // Record break as 'null' if 0 actions taken, otherwise 'break'
+        let breakType = actionsTaken > 0 ? 'break' : 'null';
+        player.breakHistory.push({ actions: [...currentBreakActions], total: player.score, type: breakType });
+        
+        state.lastScoredPlayerId = player.id;
+
+        // 3. Check Exit Validation
+        let canExit = false;
+        if (player.score >= state.targetScore && !lastActionWasFoul) {
+            if (player.compPotsLeft === 0 && player.attLeft === 0) {
+                canExit = true;
+            }
+        }
+
+        closeModal('entry-modal');
+        saveState();
+        renderGame();
+
+        if (canExit) {
+            showConfirm(`${player.name} is out! Confirm?`, () => {
+                player.isOut = true;
+                const outCount = state.players.filter(p => p.isOut).length;
+                player.outRank = outCount;
+                saveState();
+                renderGame();
+            });
+        }
+    }
+
+    // --- HISTORY ---
+    function showHistory(playerId) {
+        const player = state.players.find(p => p.id === playerId);
+        if (!player) return;
+        document.getElementById('history-title').textContent = `${player.name} History`;
+        const content = document.getElementById('history-content');
+        
+        if (player.breakHistory.length === 0) {
+            content.innerHTML = "<p style='text-align:center; color:var(--secondary-text)'>No breaks recorded yet.</p>";
+        } else {
+            let html = '';
+            player.breakHistory.forEach((br, i) => {
+                let txt = `Break ${i+1}: `;
+                if (br.type === 'null') {
+                    txt += `Null (0)`;
+                } else {
+                    txt += br.actions.map(a => `${a.ball} ${a.type == 'pot' ? '+' : '-'}${a.points}`).join(', ');
+                }
+                html += `<div class="history-entry"><span>${txt}</span><span style="font-weight:700">${br.total}</span></div>`;
+            });
+            content.innerHTML = html;
+        }
+        document.getElementById('history-modal').classList.remove('hidden');
+    }
+
+    // --- UNDO ---
+    function undoLastAction() {
+        if (isLocked) return;
+        if (state.history.length === 0) { alert("Nothing to undo."); return; }
+        
+        showConfirm("Undo the last action?", () => {
+            const prevState = JSON.parse(state.history.pop());
+            state = prevState;
+            saveState();
+            renderGame();
+        });
+    }
+
+    // --- RESET & SAVE/LOAD ---
+    function resetGame() {
+        if (isLocked) return;
+        document.getElementById('reset-modal').classList.remove('hidden');
+    }
+
+    function confirmReset(download) {
+        if (download) downloadLog();
+        localStorage.removeItem('rdSnookerState');
+        location.reload();
+    }
+
+    function downloadLog() {
+        let log = "RD SNOOKER GAME LOG\n";
+        log += `Date: ${new Date().toLocaleString()}\n`;
+        log += `Target: ${state.targetScore} | Comp Cherries: ${state.compCherries} | Att Cherries: ${state.attCherries}\n\n`;
+        
+        state.players.forEach(p => {
+            log += `--- ${p.name} (Final Score: ${p.score}) ---\n`;
+            if (p.breakHistory.length === 0) log += "No breaks.\n";
+            p.breakHistory.forEach((br, i) => {
+                let txt = `Break ${i+1}: `;
+                if (br.type === 'null') txt += `Null (0) : ${br.total}`;
+                else {
+                    txt += br.actions.map(a => `${a.ball} ${a.type == 'pot' ? '+' : '-'}${a.points}`).join(', ');
+                    txt += ` : ${br.total}`;
+                }
+                log += txt + "\n";
+            });
+            log += "\n";
+        });
+
+        log += "\n=== JSON_DATA_START ===\n";
+        log += JSON.stringify(state);
+        log += "\n=== JSON_DATA_END ===\n";
+
+        const blob = new Blob([log], { type: "text/plain;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `RD_Snooker_${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function loadGameState(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target.result;
+            try {
+                const jsonStart = text.indexOf("=== JSON_DATA_START ===");
+                const jsonEnd = text.indexOf("=== JSON_DATA_END ===");
+                if (jsonStart !== -1 && jsonEnd !== -1) {
+                    const jsonStr = text.substring(jsonStart + 24, jsonEnd).trim();
+                    const parsed = JSON.parse(jsonStr);
+                    state = parsed;
+                    saveState();
+                    showGameScreen();
+                } else { alert("Invalid log file."); }
+            } catch (err) { alert("Error reading file: " + err.message); }
+        };
+        reader.readAsText(file);
+    }
+
+    // --- UI HELPERS ---
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function showRules() { document.getElementById('rules-modal').classList.remove('hidden'); }
+    
+    function showConfirm(text, onOk) {
+        let modal = document.getElementById('dynamic-confirm-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'dynamic-confirm-modal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content centered">
+                    <div class="modal-title">Confirm</div>
+                    <p style="color: var(--secondary-text);" id="dyn-confirm-text"></p>
+                    <div style="display: flex; gap: 10px; width: 100%;">
+                        <button class="secondary-btn" id="dyn-cancel">Cancel</button>
+                        <button class="danger-btn" id="dyn-ok">OK</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+        document.getElementById('dyn-confirm-text').textContent = text;
+        modal.classList.remove('hidden');
+        
+        const okBtn = document.getElementById('dyn-ok');
+        const cancelBtn = document.getElementById('dyn-cancel');
+        
+        const newOk = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOk, okBtn);
+        newOk.onclick = () => { onOk(); modal.classList.add('hidden'); };
+        
+        const newCancel = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode.replaceChild(newCancel, cancelBtn);
+        newCancel.onclick = () => { modal.classList.add('hidden'); };
+    }
+
+    function toggleLock() {
+        isLocked = !isLocked;
+        document.getElementById('lock-overlay').classList.toggle('active', isLocked);
+        document.getElementById('lock-btn').innerHTML = isLocked ? lockClosedSvg : lockOpenSvg;
+    }
+</script>
+</body>
+</html>
