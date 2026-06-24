@@ -10,7 +10,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="RD Snooker">
-    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22RD%20Snooker%22%2C%22short_name%22%3A%22RD%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23f0f2f5%22%2C%22theme_color%22%3A%22%23000000%22%7D">
+    <meta name="theme-color" content="#000000">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     
     <style>
         :root {
@@ -79,6 +81,27 @@
         .header-timer { font-size: 18px; font-weight: 700; font-family: 'SF Mono', monospace; }
         .header-right { display: flex; gap: 5px; align-items: center; }
 
+        /* Game Info Bar */
+        #game-info-bar {
+            background: var(--card-bg);
+            padding: 12px 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--text-color);
+            box-shadow: var(--shadow);
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+        #game-info-bar span { color: var(--accent-color); }
+        #info-cherries-display { display: flex; gap: 6px; align-items: center; }
+        #info-cherries-display .status-dot { width: 12px; height: 12px; }
+        #info-cherries-display .status-separator { height: 14px; }
+
         .setup-container { display: flex; flex-direction: column; gap: 15px; }
         .input-group { display: flex; flex-direction: column; gap: 5px; }
         .checkbox-group {
@@ -111,9 +134,15 @@
         #add-player-btn { background-color: transparent; color: var(--accent-color); border: 1px dashed var(--accent-color); }
         #continue-game-btn { background-color: transparent; color: var(--text-color); border: 1px solid var(--border-color); margin-top: 10px; }
 
+        /* Game Screen Action Buttons - White Borders */
         .game-screen-actions { display: flex; gap: 12px; margin-top: 20px; }
-        .game-screen-actions button { flex: 1; padding: 12px; font-size: 15px; }
-        .remove-player-btn { color: var(--danger-color); border-color: var(--danger-color) !important; }
+        .game-screen-actions button { 
+            flex: 1; padding: 12px; font-size: 15px; 
+            background-color: transparent; 
+            border: 1px solid #ffffff !important; 
+        }
+        #add-player-game-btn { color: var(--accent-color); } 
+        .remove-player-btn { color: var(--danger-color); } 
 
         #player-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
         .player-card {
@@ -128,9 +157,9 @@
         .player-name { font-size: 19px; font-weight: 700; cursor: pointer; }
         
         .cherry-status { display: flex; gap: 6px; align-items: center; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--danger-color); transition: opacity 0.2s; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: var(--danger-color); transition: opacity 0.2s; border: 1px solid rgba(0,0,0,0.1); }
         .status-dot.attempt { background-color: transparent; border: 1px solid var(--secondary-text); }
-        .status-dot.done { opacity: 0.3; background-color: var(--secondary-text) !important; position: relative; overflow: hidden; }
+        .status-dot.done { opacity: 0.3; background-color: var(--secondary-text) !important; position: relative; overflow: hidden; border-color: var(--secondary-text); }
         .status-dot.done::after { content: ''; position: absolute; top: 50%; left: -10%; width: 120%; height: 2px; background-color: var(--secondary-text); transform: rotate(-45deg); }
         .status-separator { width: 1px; height: 12px; background-color: var(--border-color); margin: 0 4px; }
         
@@ -147,14 +176,26 @@
         #reset-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); }
         #undo-btn, #redo-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 14px; }
         
+        /* Lock UI States */
         body.locked .player-score, 
         body.locked .game-screen-actions button, 
         body.locked .bottom-bar button:not(#lock-btn) {
             opacity: 0.4; pointer-events: none;
         }
-        body.locked .player-name { pointer-events: auto !important; opacity: 1 !important; }
+        body.locked .player-name {
+            pointer-events: auto !important;
+            opacity: 1 !important;
+        }
 
-        /* Modals - Removed backdrop-filter for mobile performance */
+        /* Game Over Strict Lock */
+        body.game-over .player-score, 
+        body.game-over .game-screen-actions button, 
+        body.game-over #redo-btn,
+        body.game-over #reset-btn {
+            opacity: 0.4; pointer-events: none;
+        }
+
+        /* Modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75);
             display: flex; justify-content: center; align-items: flex-end; z-index: 300;
@@ -169,13 +210,13 @@
         .modal-title { font-size: 18px; font-weight: 700; }
         .close-x { background: none; color: var(--secondary-text); width: auto; font-size: 24px; padding: 0; }
 
-        /* Optimized Balls Grid */
+        /* Balls Grid */
         .ball-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
         .ball-btn {
             aspect-ratio: 1; border-radius: 50%; display: flex; justify-content: center; align-items: center;
             font-weight: 800; font-size: 18px; color: #fff; border: none; cursor: pointer; width: 100%; padding: 0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Lighter shadow */
-            background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%); /* Fake 3D inset */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); 
+            background-image: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%); 
         }
         .ball-btn:active { transform: scale(0.95); }
         .ball-btn:disabled { opacity: 0.2; box-shadow: none; cursor: not-allowed; transform: none; background-image: none; }
@@ -192,12 +233,11 @@
         .history-entry { padding: 10px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; }
         .history-entry:last-child { border-bottom: none; }
 
-        .lock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 100; display: none; }
+        .lock-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 100; display: none; pointer-events: none; }
         .lock-overlay.active { display: block; }
 
         .rules-text { font-size: 14px; line-height: 1.6; color: var(--secondary-text); max-height: 60vh; overflow-y: auto; text-align: left; }
         
-        /* Prompt Input Styles */
         .modal-input { width: 100%; margin-bottom: 15px; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color); }
     </style>
 </head>
@@ -243,10 +283,11 @@
     </div>
 
     <div id="game-screen" class="screen hidden">
+        <div id="game-info-bar">Target : <span id="info-target">100</span> <span id="info-cherries-display"></span></div>
         <div id="player-list"></div>
         
         <div class="game-screen-actions">
-            <button class="secondary-btn" onclick="addPlayerFromGame()">+ Add Player</button>
+            <button id="add-player-game-btn" class="secondary-btn" onclick="addPlayerFromGame()">+ Add Player</button>
             <button class="secondary-btn remove-player-btn" onclick="showRemovePlayerModal()">- Remove Player</button>
         </div>
         
@@ -339,7 +380,7 @@
         </div>
     </div>
 
-    <!-- Dynamic Modal (For Alerts, Prompts, Confirms) -->
+    <!-- Dynamic Modal -->
     <div id="dynamic-modal" class="modal-overlay hidden">
         <div class="modal-content centered">
             <div class="modal-title" id="dyn-title">Title</div>
@@ -357,12 +398,13 @@
         compCherries: 0,
         attCherries: 0,
         timerStart: null,
-        lastScoredPlayerId: null
+        lastScoredPlayerId: null,
+        gameOver: false
     };
 
-    let history = []; // Separated from state to prevent exponential JSON growth
+    let history = []; 
     let redoHistory = [];
-    let isProcessing = false; // Double-tap protection
+    let isProcessing = false; 
 
     let currentBreakActions = [];
     let currentActionType = 'pot';
@@ -389,7 +431,6 @@
     const undoSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>';
     const redoSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>';
 
-    // --- INIT ---
     document.addEventListener('DOMContentLoaded', () => {
         const savedTheme = localStorage.getItem('rdTheme') || 'light';
         document.body.setAttribute('data-theme', savedTheme);
@@ -417,9 +458,7 @@
     });
 
     async function requestWakeLock() {
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-        } catch (err) { console.error('Wake Lock error:', err); }
+        try { wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { console.error('Wake Lock error:', err); }
     }
     document.addEventListener('visibilitychange', async () => {
         if (wakeLock !== null && document.visibilityState === 'visible' && !document.getElementById('game-screen').classList.contains('hidden')) {
@@ -475,7 +514,7 @@
         });
 
         if (players.length < 2) {
-            showDynamicModal("Alert", "Need at least 2 players to start!", [{ text: "OK", class: "accent-btn" }]);
+            showDynamicModal("Alert", "Need at least 2 players to start!", [{ text: "OK", class: "accent-btn", onClick: () => closeModal('dynamic-modal') }]);
             return;
         }
 
@@ -492,6 +531,7 @@
         state.attCherries = parseInt(document.getElementById('att-cherries').value) || 0;
         state.timerStart = Date.now();
         state.lastScoredPlayerId = null;
+        state.gameOver = false;
         history = [];
         redoHistory = [];
 
@@ -513,7 +553,24 @@
         document.getElementById('game-screen').classList.remove('hidden');
         document.getElementById('timer').style.display = 'block';
         document.getElementById('lock-btn').style.display = 'flex';
-        startTimer();
+        
+        document.getElementById('info-target').textContent = state.targetScore;
+        let cherriesHtml = '';
+        for(let i=0; i<state.compCherries; i++) cherriesHtml += `<span class="status-dot"></span>`;
+        if (state.attCherries > 0) {
+            cherriesHtml += '<span class="status-separator"></span>';
+            for(let i=0; i<state.attCherries; i++) cherriesHtml += `<span class="status-dot attempt"></span>`;
+        }
+        document.getElementById('info-cherries-display').innerHTML = cherriesHtml;
+
+        if (state.gameOver) {
+            document.body.classList.add('game-over');
+            stopTimer();
+        } else {
+            document.body.classList.remove('game-over');
+            startTimer();
+        }
+
         requestWakeLock();
         updateUndoRedoButtons();
         renderGame();
@@ -530,7 +587,7 @@
         }, 1000);
     }
 
-    function stopTimer() { if (timerInterval) clearInterval(timerInterval); if (wakeLock) wakeLock.release(); }
+    function stopTimer() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; if (wakeLock) wakeLock.release(); }
 
     function undoLastAction() {
         if (isLocked || isProcessing || history.length === 0) return;
@@ -538,8 +595,8 @@
         redoHistory.push(currentSnapshot);
         state = JSON.parse(history.pop());
         
-        // Resume timer if game was over but now isn't (accounts for real time passed)
-        if (state.players.filter(p => !p.isOut).length > 1 && !timerInterval) {
+        if (!state.gameOver && state.players.filter(p => !p.isOut).length > 1 && !timerInterval) {
+            document.body.classList.remove('game-over');
             startTimer(); 
         }
         
@@ -549,10 +606,16 @@
     }
 
     function redoLastAction() {
-        if (isLocked || isProcessing || redoHistory.length === 0) return;
+        if (isLocked || isProcessing || state.gameOver || redoHistory.length === 0) return;
         const currentSnapshot = JSON.stringify(state);
         history.push(currentSnapshot);
         state = JSON.parse(redoHistory.pop());
+        
+        if (state.gameOver) {
+            document.body.classList.add('game-over');
+            stopTimer();
+        }
+        
         saveState();
         renderGame();
         updateUndoRedoButtons();
@@ -560,11 +623,11 @@
 
     function updateUndoRedoButtons() {
         document.getElementById('undo-btn').disabled = history.length === 0;
-        document.getElementById('redo-btn').disabled = redoHistory.length === 0;
+        document.getElementById('redo-btn').disabled = redoHistory.length === 0 || state.gameOver;
     }
 
     function addPlayerFromGame() {
-        if (isLocked) return;
+        if (isLocked || state.gameOver) return;
         showDynamicModal("Add Player", "Enter new player's name. They will start at 0 points and require " + state.compCherries + " Cherry pots and " + state.attCherries + " attempts.", [
             { text: "Cancel", class: "secondary-btn", onClick: () => closeModal('dynamic-modal') },
             { text: "Add", class: "accent-btn", onClick: () => {
@@ -584,7 +647,7 @@
     }
 
     function showRemovePlayerModal() {
-        if (isLocked) return;
+        if (isLocked || state.gameOver) return;
         const list = document.getElementById('remove-player-list');
         list.innerHTML = '';
         if (state.players.length <= 1) {
@@ -619,6 +682,13 @@
             state.players.filter(p => p.isOut).sort((a, b) => a.outRank - b.outRank).forEach((p, i) => p.outRank = i + 1);
             if (resetTime) { state.timerStart = Date.now(); startTimer(); }
             if (activePlayerId === id) { closeModal('entry-modal'); activePlayerId = null; }
+            
+            if (state.players.filter(p => !p.isOut).length === 1) {
+                state.gameOver = true;
+                document.body.classList.add('game-over');
+                stopTimer();
+            }
+            
             saveState(); renderGame();
         }
     }
@@ -659,7 +729,7 @@
     let consecutivePots = { ball: null, count: 0 };
 
     function openEntryModal(playerId) {
-        if (isLocked) return;
+        if (isLocked || state.gameOver) return;
         activePlayerId = playerId;
         currentBreakActions = []; currentActionType = 'pot'; consecutivePots = { ball: null, count: 0 };
         const player = state.players.find(p => p.id === playerId);
@@ -704,7 +774,6 @@
         let points = ball.points;
         if (currentActionType === 'foul' && points < 4) points = 4;
 
-        // Cherry Pot Auto-Foul on 0 Score
         if (currentActionType === 'pot' && ball.name === 'cherry') {
             const player = state.players.find(p => p.id === activePlayerId);
             let tempScore = player.score;
@@ -715,7 +784,6 @@
             });
 
             if (tempScore === 0 && !pottedInBreak && !player.hasMovedFromZero) {
-                // Automatically register as accidental foul
                 processAction('foul', ball, 10, false, false);
                 return;
             }
@@ -762,7 +830,6 @@
         });
         document.getElementById('current-break-display').innerHTML = `Break: ${text} <span>= ${total}</span>`;
         
-        // Real-time score update in modal title
         const player = state.players.find(p => p.id === activePlayerId);
         if (player) {
             document.getElementById('entry-title').textContent = `${player.name} (${player.score + total})`;
@@ -827,11 +894,13 @@
                     player.outRank = state.players.filter(p => p.isOut).length;
                     saveState();
                     renderGame();
-                    closeModal('dynamic-modal'); // Close confirm modal first
+                    closeModal('dynamic-modal'); 
 
-                    // Check for game over
                     if (state.players.filter(p => !p.isOut).length === 1) {
+                        state.gameOver = true;
+                        document.body.classList.add('game-over');
                         stopTimer();
+                        saveState();
                         showDynamicModal("Game Over", `${state.players.find(p => !p.isOut).name} has lost the frame!`, [{ text: "OK", class: "accent-btn", onClick: () => closeModal('dynamic-modal') }]);
                     }
                 }}
@@ -859,7 +928,7 @@
         document.getElementById('history-modal').classList.remove('hidden');
     }
 
-    function resetGame() { if (!isLocked) document.getElementById('reset-modal').classList.remove('hidden'); }
+    function resetGame() { if (!isLocked && !state.gameOver) document.getElementById('reset-modal').classList.remove('hidden'); }
     function confirmReset(download) { if (download) downloadLog(); localStorage.removeItem('rdSnookerState'); location.reload(); }
 
     function downloadLog() {
@@ -893,9 +962,10 @@
                 if (jsonStart !== -1 && jsonEnd !== -1) {
                     state = JSON.parse(text.substring(jsonStart + 24, jsonEnd).trim());
                     history = []; redoHistory = [];
+                    if (!state.hasOwnProperty('gameOver')) state.gameOver = false;
                     saveState(); showGameScreen();
-                } else { showDynamicModal("Error", "Invalid log file.", [{ text: "OK", class: "accent-btn" }]); }
-            } catch (err) { showDynamicModal("Error", "Error reading file: " + err.message, [{ text: "OK", class: "accent-btn" }]); }
+                } else { showDynamicModal("Error", "Invalid log file.", [{ text: "OK", class: "accent-btn", onClick: () => closeModal('dynamic-modal') }]); }
+            } catch (err) { showDynamicModal("Error", "Error reading file: " + err.message, [{ text: "OK", class: "accent-btn", onClick: () => closeModal('dynamic-modal') }]); }
         };
         reader.readAsText(file);
     }
@@ -928,6 +998,15 @@
         document.body.classList.toggle('locked', isLocked);
         document.getElementById('lock-overlay').classList.toggle('active', isLocked);
         document.getElementById('lock-btn').innerHTML = isLocked ? lockClosedSvg : lockOpenSvg;
+    }
+
+    // --- PWA Service Worker Registration ---
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(reg => console.log('Service Worker registered:', reg.scope))
+                .catch(err => console.error('Service Worker registration failed:', err));
+        });
     }
 </script>
 </body>
