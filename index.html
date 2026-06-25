@@ -176,10 +176,10 @@
         #reset-btn { background-color: transparent; color: var(--danger-color); border: 1px solid var(--danger-color); }
         #undo-btn, #redo-btn { background-color: var(--card-bg); color: var(--text-color); border: 1px solid var(--border-color); padding: 14px; }
         
-        /* Lock UI States */
+        /* Lock UI States (Reset button explicitly kept active) */
         body.locked .player-score, 
         body.locked .game-screen-actions button, 
-        body.locked .bottom-bar button:not(#lock-btn) {
+        body.locked .bottom-bar button:not(#lock-btn):not(#reset-btn) {
             opacity: 0.4; pointer-events: none;
         }
         body.locked .player-name {
@@ -187,11 +187,10 @@
             opacity: 1 !important;
         }
 
-        /* Game Over Strict Lock */
+        /* Game Over Strict Lock (Reset button explicitly kept active) */
         body.game-over .player-score, 
         body.game-over .game-screen-actions button, 
-        body.game-over #redo-btn,
-        body.game-over #reset-btn {
+        body.game-over #redo-btn {
             opacity: 0.4; pointer-events: none;
         }
 
@@ -650,8 +649,8 @@
         if (isLocked || state.gameOver) return;
         const list = document.getElementById('remove-player-list');
         list.innerHTML = '';
-        if (state.players.length <= 1) {
-            list.innerHTML = "<p style='text-align:center; color:var(--secondary-text)'>Cannot remove the last player!</p>";
+        if (state.players.length <= 2) {
+            list.innerHTML = "<p style='text-align:center; color:var(--secondary-text)'>Cannot remove a player in a 2-player game! Add a third player first.</p>";
         } else {
             state.players.forEach(p => {
                 const btn = document.createElement('button');
@@ -928,7 +927,8 @@
         document.getElementById('history-modal').classList.remove('hidden');
     }
 
-    function resetGame() { if (!isLocked && !state.gameOver) document.getElementById('reset-modal').classList.remove('hidden'); }
+    // Removed the lock/gameover check so Reset is ALWAYS clickable
+    function resetGame() { document.getElementById('reset-modal').classList.remove('hidden'); }
     function confirmReset(download) { if (download) downloadLog(); localStorage.removeItem('rdSnookerState'); location.reload(); }
 
     function downloadLog() {
