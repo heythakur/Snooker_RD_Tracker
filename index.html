@@ -202,12 +202,13 @@
         .modal-content {
             background-color: var(--modal-bg); width: 100%; max-width: 500px; border-radius: 24px 24px 0 0;
             padding: 24px; display: flex; flex-direction: column; gap: 20px; animation: slideUp 0.2s ease-out;
+            position: relative;
         }
         .modal-content.centered { border-radius: 24px; align-items: center; text-align: center; max-width: 400px; margin: auto; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .modal-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .modal-title { font-size: 18px; font-weight: 700; }
-        .close-x { background: none; color: var(--secondary-text); width: auto; font-size: 24px; padding: 0; }
+        .close-x { background: none; color: var(--secondary-text); width: auto; font-size: 24px; padding: 0; position: absolute; top: 15px; right: 15px; }
 
         /* Balls Grid */
         .ball-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
@@ -367,10 +368,8 @@
     <!-- Reset Modal -->
     <div id="reset-modal" class="modal-overlay hidden">
         <div class="modal-content centered">
-            <div class="modal-header" style="width:100%;">
-                <div class="modal-title">Reset Game?</div>
-                <button class="close-x" onclick="closeModal('reset-modal')">✕</button>
-            </div>
+            <button class="close-x" onclick="closeModal('reset-modal')">✕</button>
+            <div class="modal-title">Reset Game?</div>
             <p style="color: var(--secondary-text);">Choose an option below. Resetting will clear the current game.</p>
             <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
                 <button class="accent-btn" onclick="confirmReset(true)">Download File & Reset</button>
@@ -382,6 +381,7 @@
     <!-- Dynamic Modal -->
     <div id="dynamic-modal" class="modal-overlay hidden">
         <div class="modal-content centered">
+            <button class="close-x" onclick="closeModal('dynamic-modal')">✕</button>
             <div class="modal-title" id="dyn-title">Title</div>
             <p id="dyn-text" style="color: var(--secondary-text);"></p>
             <input type="text" id="dyn-input" class="modal-input hidden" placeholder="Enter name...">
@@ -404,6 +404,7 @@
     let history = []; 
     let redoHistory = [];
     let isProcessing = false; 
+    let isUndoingSequence = false; // Smart Undo flag
 
     let currentBreakActions = [];
     let currentActionType = 'pot';
@@ -477,6 +478,7 @@
         history.push(snapshot);
         if (history.length > 20) history.shift();
         redoHistory = []; 
+        isUndoingSequence = false; // Reset smart undo flag on new action
         saveState();
         updateUndoRedoButtons();
     }
@@ -533,6 +535,7 @@
         state.gameOver = false;
         history = [];
         redoHistory = [];
+        isUndoingSequence = false;
 
         players.forEach(p => { p.compPotsLeft = state.compCherries; p.attLeft = state.attCherries; });
         saveState();
@@ -588,11 +591,28 @@
 
     function stopTimer() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; if (wakeLock) wakeLock.release(); }
 
+    // --- SMART UNDO LOGIC ---
     function undoLastAction() {
-        if (isLocked || isProcessing || history.length === 0) return;
+        if (isLocked || isProcessing || state.gameOver || history.length === 0) return;
+        
+        if (!isUndoingSequence) {
+            showDynamicModal("Confirm Undo", "Are you sure you want to undo the last action?", [
+                { text: "Cancel", class: "secondary-btn", onClick: () => closeModal('dynamic-modal') },
+                { text: "Confirm", class: "danger-btn", onClick: () => {
+                    executeUndo();
+                    closeModal('dynamic-modal');
+                }}
+            ]);
+        } else {
+            executeUndo();
+        }
+    }
+
+    function executeUndo() {
         const currentSnapshot = JSON.stringify(state);
         redoHistory.push(currentSnapshot);
         state = JSON.parse(history.pop());
+        isUndoingSequence = true; // Allow rapid undos
         
         if (!state.gameOver && state.players.filter(p => !p.isOut).length > 1 && !timerInterval) {
             document.body.classList.remove('game-over');
@@ -609,6 +629,7 @@
         const currentSnapshot = JSON.stringify(state);
         history.push(currentSnapshot);
         state = JSON.parse(redoHistory.pop());
+        isUndoingSequence = false; // Any redo breaks the undo sequence
         
         if (state.gameOver) {
             document.body.classList.add('game-over');
@@ -757,9 +778,10 @@
             btn.innerText = `${ball.points}`;
             let isDisabled = breakEnded;
 
-            if (ball.name === 'cherry' && !isDisabled) {
-                if (currentActionType === 'pot' && !pottedInBreak) {
-                    isDisabled = true; // Cannot be the first ball potted in a break / break is 0
+            // Cherry "First Ball Ever" Restriction Logic
+            if (ball.name === 'cherry' && !isDisabled && currentActionType === 'pot') {
+                if (player.score === 0 && !player.hasMovedFromZero && tempScore === 0) {
+                    isDisabled = true; // Disabled ONLY if player hasn't moved from absolute 0 yet
                 }
             }
 
@@ -962,6 +984,7 @@
                 if (jsonStart !== -1 && jsonEnd !== -1) {
                     state = JSON.parse(text.substring(jsonStart + 24, jsonEnd).trim());
                     history = []; redoHistory = [];
+                    isUndoingSequence = false;
                     if (!state.hasOwnProperty('gameOver')) state.gameOver = false;
                     saveState(); showGameScreen();
                 } else { showDynamicModal("Error", "Invalid log file.", [{ text: "OK", class: "accent-btn", onClick: () => closeModal('dynamic-modal') }]); }
