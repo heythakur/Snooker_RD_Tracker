@@ -742,7 +742,11 @@
         const grid = document.getElementById('ball-grid');
         grid.innerHTML = '';
         let tempScore = player.score;
-        currentBreakActions.forEach(a => { tempScore += (a.type === 'pot' ? a.points : -a.points); });
+        let pottedInBreak = false;
+        currentBreakActions.forEach(a => { 
+            if (a.type === 'pot') { pottedInBreak = true; tempScore += a.points; }
+            else tempScore -= a.points;
+        });
         let breakEnded = currentBreakActions.length > 0 && currentBreakActions[currentBreakActions.length - 1].type === 'foul';
 
         BALLS.forEach(ball => {
@@ -752,6 +756,13 @@
             btn.style.color = ball.textDark ? '#000' : '#fff';
             btn.innerText = `${ball.points}`;
             let isDisabled = breakEnded;
+
+            if (ball.name === 'cherry' && !isDisabled) {
+                if (currentActionType === 'pot' && !pottedInBreak) {
+                    isDisabled = true; // Cannot be the first ball potted in a break / break is 0
+                }
+            }
+
             if (isDisabled) btn.disabled = true;
             btn.onclick = () => addAction(ball);
             grid.appendChild(btn);
@@ -773,26 +784,16 @@
         let points = ball.points;
         if (currentActionType === 'foul' && points < 4) points = 4;
 
-        if (currentActionType === 'pot' && ball.name === 'cherry') {
-            const player = state.players.find(p => p.id === activePlayerId);
-            let tempScore = player.score;
-            let pottedInBreak = false;
-            currentBreakActions.forEach(a => {
-                if (a.type === 'pot') { pottedInBreak = true; tempScore += a.points; }
-                else tempScore -= a.points;
-            });
-
-            if (tempScore === 0 && !pottedInBreak && !player.hasMovedFromZero) {
-                processAction('foul', ball, 10, false, false);
-                return;
-            }
-        }
-
         if (currentActionType === 'foul' && ball.name === 'cherry') {
-            showDynamicModal("Cherry Foul", "Should marked it as Cherry Attempt ?", [
-                { text: "No (Foul)", class: "secondary-btn", onClick: () => { processAction('foul', ball, points, false, false); closeModal('dynamic-modal'); } },
-                { text: "Yes (Attempt)", class: "danger-btn", onClick: () => { processAction('foul', ball, points, false, true); closeModal('dynamic-modal'); } }
-            ]);
+            const player = state.players.find(p => p.id === activePlayerId);
+            if (player.attLeft > 0 && state.attCherries > 0) {
+                showDynamicModal("Cherry Foul", "Should marked it as Cherry Attempt ?", [
+                    { text: "No (Foul)", class: "secondary-btn", onClick: () => { processAction('foul', ball, points, false, false); closeModal('dynamic-modal'); } },
+                    { text: "Yes (Attempt)", class: "danger-btn", onClick: () => { processAction('foul', ball, points, false, true); closeModal('dynamic-modal'); } }
+                ]);
+            } else {
+                processAction('foul', ball, points, false, false);
+            }
             return;
         }
 
@@ -927,7 +928,6 @@
         document.getElementById('history-modal').classList.remove('hidden');
     }
 
-    // Removed the lock/gameover check so Reset is ALWAYS clickable
     function resetGame() { document.getElementById('reset-modal').classList.remove('hidden'); }
     function confirmReset(download) { if (download) downloadLog(); localStorage.removeItem('rdSnookerState'); location.reload(); }
 
